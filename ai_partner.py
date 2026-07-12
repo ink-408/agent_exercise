@@ -5,9 +5,24 @@ from pathlib import Path
 from ollama import Client
 
 
-if __name__ == "__main__":
+def build_system_prompt():
+    return f"""
+    你叫{st.session_state.nick_name}，现在是用户的真实伴侣，请完全代入伴侣角色。：
+    规则：
+        1. 每次只回1条消息
+        2. 禁止任何场景或状态描述性文字
+        3. 匹配用户的语言
+        4. 回复简短，像微信聊天一样
+        5. 有需要的话可以用❤️🌸等emoji表情
+        6. 用符合伴侣性格的方式对话
+        7. 回复的内容, 要充分体现伴侣的性格特征
+    伴侣性格：
+        - {st.session_state.personality}
+    你必须严格遵守上述规则来回复用户。
+"""
 
 
+def page_config():
     st.set_page_config(
         page_title="AI智能伴侣",
         page_icon="🤖",
@@ -20,15 +35,33 @@ if __name__ == "__main__":
             "About": "# This is a header. This is an *extremely* cool app!",
         },
     )
-
     st.title("AI智能伴侣")
     st.logo("asset/logo.png")
 
+def get_ollama_client():
+    try:
+        config_path = Path(__file__).with_name("config.json")
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        ollama_host = config.get("ollama_host")
+    except Exception as e:
+        raise RuntimeError(f"配置文件出错: {e}")
+
+    client = Client(host=ollama_host, headers={"x-some-header": "some-value"})
+    return client
+
+def agent_info():
     if "nick_name" not in st.session_state:
         st.session_state.nick_name = "东北雨姐"
 
     if "personality" not in st.session_state:
         st.session_state.personality = "活泼开朗的东北姑娘"
+
+if __name__ == "__main__":
+
+
+    page_config()
+    client = get_ollama_client()
+    agent_info()
 
     #左侧侧边栏
     with st.sidebar:
@@ -41,31 +74,9 @@ if __name__ == "__main__":
         if personality:
             st.session_state.personality = personality
 
-    try:
-        config_path = Path(__file__).with_name("config.json")
-        config = json.loads(config_path.read_text(encoding="utf-8"))
-        ollama_host = config.get("ollama_host")
-    except Exception as e:
-        raise RuntimeError(f"配置文件出错: {e}")
-
-    client = Client(host=ollama_host, headers={"x-some-header": "some-value"})
-
     prompt = st.chat_input("Say something")
     #根据输入进行修改
-    system_prompt=f"""
-        你叫{st.session_state.nick_name}，现在是用户的真实伴侣，请完全代入伴侣角色。：
-        规则：
-            1. 每次只回1条消息
-            2. 禁止任何场景或状态描述性文字
-            3. 匹配用户的语言
-            4. 回复简短，像微信聊天一样
-            5. 有需要的话可以用❤️🌸等emoji表情
-            6. 用符合伴侣性格的方式对话
-            7. 回复的内容, 要充分体现伴侣的性格特征
-        伴侣性格：
-            - {st.session_state.personality}
-        你必须严格遵守上述规则来回复用户。
-    """
+
 
     # 初始化聊天记录
     if 'messages' not in st.session_state:
@@ -87,13 +98,8 @@ if __name__ == "__main__":
         response = client.chat(
             model="qwen3.5:9b",
             messages=[
-                {"role":"system",
-                 "content":system_prompt},
-                 *st.session_state.messages,
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
+                {"role": "system", "content": build_system_prompt()},
+                *st.session_state.messages,
             ],
             stream=True,
         )
