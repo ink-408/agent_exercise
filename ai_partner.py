@@ -24,6 +24,23 @@ if __name__ == "__main__":
     st.title("AI智能伴侣")
     st.logo("asset/logo.png")
 
+    if "nick_name" not in st.session_state:
+        st.session_state.nick_name = "东北雨姐"
+
+    if "personality" not in st.session_state:
+        st.session_state.personality = "活泼开朗的东北姑娘"
+
+    #左侧侧边栏
+    with st.sidebar:
+        st.subheader("伴侣信息")
+        nick_name = st.text_input("昵称", value="东北雨姐")
+        if nick_name:
+            st.session_state.nick_name = nick_name
+        #性格
+        personality = st.text_area("性格", value="活泼开朗的东北姑娘")
+        if personality:
+            st.session_state.personality = personality
+
     try:
         config_path = Path(__file__).with_name("config.json")
         config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -34,7 +51,21 @@ if __name__ == "__main__":
     client = Client(host=ollama_host, headers={"x-some-header": "some-value"})
 
     prompt = st.chat_input("Say something")
-    system_prompt="你是一名可爱的AI助理，使用温柔可爱的语言风格回答，你是小A"
+    #根据输入进行修改
+    system_prompt=f"""
+        你叫{st.session_state.nick_name}，现在是用户的真实伴侣，请完全代入伴侣角色。：
+        规则：
+            1. 每次只回1条消息
+            2. 禁止任何场景或状态描述性文字
+            3. 匹配用户的语言
+            4. 回复简短，像微信聊天一样
+            5. 有需要的话可以用❤️🌸等emoji表情
+            6. 用符合伴侣性格的方式对话
+            7. 回复的内容, 要充分体现伴侣的性格特征
+        伴侣性格：
+            - {st.session_state.personality}
+        你必须严格遵守上述规则来回复用户。
+    """
 
     # 初始化聊天记录
     if 'messages' not in st.session_state:
@@ -78,5 +109,6 @@ if __name__ == "__main__":
             assistant_message += i["message"]["content"]
             response_message.write(assistant_message)
         st.session_state.messages.append({"role": "assistant","content": assistant_message})
+
         
         
