@@ -29,5 +29,5 @@ st.video("asset/news.mp4")
 st.logo("asset/logo.png")
 nums=[i for i in range(10)]
 st.table(nums)
-name=st.text_input("最喜欢的人","None",type="password")
-st.write(f"最喜欢的人是{name}")
+name=st.text_input("最喜欢的电影","None",type="password")
+st.write(f"最喜欢的电影是{name}")
