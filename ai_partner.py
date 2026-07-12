@@ -58,15 +58,25 @@ if __name__ == "__main__":
             messages=[
                 {"role":"system",
                  "content":system_prompt},
+                 *st.session_state.messages,
                 {
                     "role": "user",
                     "content": prompt,
                 },
             ],
-            stream=False,
+            stream=True,
         )
-        # print(response['message']['content'])
-        print("<---------------大模型返回的结果为：",response['message']['content'])
-        st.session_state.messages.append({"role": "assistant","content": response['message']['content']})
-        st.chat_message("assistant").write(response['message']['content'])
+        # 菲流式输出
+        # print("<---------------大模型返回的结果为：",response['message']['content'])
+        # st.session_state.messages.append({"role": "assistant","content": response['message']['content']})
+        # st.chat_message("assistant").write(response['message']['content'])
+
+        # 流式输出
+        response_message = st.empty()
+        assistant_message = ""
+        for i in response:
+            assistant_message += i["message"]["content"]
+            response_message.write(assistant_message)
+        st.session_state.messages.append({"role": "assistant","content": assistant_message})
+        
         
