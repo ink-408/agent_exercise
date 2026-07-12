@@ -4,7 +4,10 @@ import json
 from pathlib import Path
 from ollama import Client
 
+
 if __name__ == "__main__":
+
+
     st.set_page_config(
         page_title="AI智能伴侣",
         page_icon="🤖",
@@ -32,9 +35,23 @@ if __name__ == "__main__":
 
     prompt = st.chat_input("Say something")
     system_prompt="你是一名可爱的AI助理，使用温柔可爱的语言风格回答，你是小A"
+
+    # 初始化聊天记录
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+
+    #展示聊天信息
+    for message in st.session_state.messages:
+        st.chat_message(message["role"]).write(message["content"])
+        # if message["role"]=="user":
+        #     st.chat_message("user").write(message["content"])
+        # else:
+        #     st.chat_message("assistant").write(message["content"])
+
     if prompt:
         # st.write(f"User: {prompt}")
         st.chat_message("user").write(prompt)
+        st.session_state.messages.append({"role": "user","content": prompt})
         print("------------->调用大模型，提示词：", prompt)
         response = client.chat(
             model="qwen3.5:9b",
@@ -50,4 +67,6 @@ if __name__ == "__main__":
         )
         # print(response['message']['content'])
         print("<---------------大模型返回的结果为：",response['message']['content'])
+        st.session_state.messages.append({"role": "assistant","content": response['message']['content']})
         st.chat_message("assistant").write(response['message']['content'])
+        
