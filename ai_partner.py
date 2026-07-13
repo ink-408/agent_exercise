@@ -3,6 +3,7 @@ import streamlit as st
 import json
 from pathlib import Path
 from ollama import Client
+import datetime
 
 
 def build_system_prompt():
@@ -56,6 +57,43 @@ def agent_info():
     if "personality" not in st.session_state:
         st.session_state.personality = "活泼开朗的东北姑娘"
 
+    if "current_session" not in st.session_state:
+        st.session_state.current_session = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    # 初始化聊天记录
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    
+
+def reserve_session_history():
+    # 保存聊天记录到本地文件
+    session_history = {
+        "nick_name": st.session_state.nick_name,
+        "personality": st.session_state.personality,
+        "current_session": st.session_state.current_session,
+        "messages": st.session_state.messages
+    }
+    asset_dir = Path(__file__).with_name("asset")
+    file_name = asset_dir / f"session_history_{st.session_state.current_session}.json"
+    with file_name.open("w", encoding="utf-8") as f:
+        json.dump(session_history, f, ensure_ascii=False, indent=4)
+    st.success(f"聊天记录已保存为 {file_name}")
+
+def new_chat_session():
+    if st.session_state.current_session:
+        reserve_session_history()
+    st.session_state.update({"messages": [], "current_session": datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")})
+    st.success("已创建新聊天会话")
+
+def load_session_history(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        session_history = json.load(f)
+    st.session_state.nick_name = session_history.get("nick_name", "东北雨姐")
+    st.session_state.personality = session_history.get("personality", "活泼开朗的东北姑娘")
+    st.session_state.current_session = session_history.get("current_session", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    st.session_state.messages = session_history.get("messages", [])
+    st.success(f"已加载会话历史: {file_path}")
+
 if __name__ == "__main__":
 
 
@@ -65,6 +103,15 @@ if __name__ == "__main__":
 
     #左侧侧边栏
     with st.sidebar:
+        st.button("新建聊天", on_click=new_chat_session,icon="🆕",width="stretch")
+        st.button("保存聊天记录", on_click=reserve_session_history,icon="💾",width="stretch")
+        #展示会话列表
+        st.subheader("会话列表")
+        session_files = list(Path(__file__).with_name("asset").glob("session_history_*.json"))
+        for file in session_files:
+            if st.button(file.name):
+                # 加载会话历史
+                load_session_history(file)
         st.subheader("伴侣信息")
         nick_name = st.text_input("昵称", value="东北雨姐")
         if nick_name:
@@ -73,14 +120,13 @@ if __name__ == "__main__":
         personality = st.text_area("性格", value="活泼开朗的东北姑娘")
         if personality:
             st.session_state.personality = personality
+        
 
     prompt = st.chat_input("Say something")
     #根据输入进行修改
 
 
-    # 初始化聊天记录
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
+
 
     #展示聊天信息
     for message in st.session_state.messages:
