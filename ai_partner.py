@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from ollama import Client
 import datetime
+import os
 
 
 def build_system_prompt():
@@ -94,6 +95,16 @@ def load_session_history(file_path):
     st.session_state.messages = session_history.get("messages", [])
     st.success(f"已加载会话历史: {file_path}")
 
+def remove_session(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            if file_path.name==f"session_history_{st.session_state.current_session}.json":
+                st.session_state.update({"messages": [], "current_session": datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")})
+            
+    except Exception:
+        st.error("删除失败")
+
 if __name__ == "__main__":
 
 
@@ -108,10 +119,23 @@ if __name__ == "__main__":
         #展示会话列表
         st.subheader("会话列表")
         session_files = list(Path(__file__).with_name("asset").glob("session_history_*.json"))
+        session_files.reverse()
         for file in session_files:
-            if st.button(file.name):
-                # 加载会话历史
-                load_session_history(file)
+            col1,col2=st.columns([4,1])
+            with col1:
+                if st.button(file.name[:-5],icon="😊",type="primary" if file.name==f"session_history_{st.session_state.current_session}.json" else "secondary"):
+                    load_session_history(file)
+                    st.rerun()
+
+            with col2:
+                if st.button("",icon="❌",key=f"delete_{file.name}"):
+                    remove_session(file)
+                    st.rerun()
+            # if st.button(file.name[:-5],icon="😊"):
+            #     # 加载会话历史
+            #     load_session_history(file)
+        #删除会话
+        st.divider()
         st.subheader("伴侣信息")
         nick_name = st.text_input("昵称", value="东北雨姐")
         if nick_name:
@@ -161,6 +185,7 @@ if __name__ == "__main__":
             assistant_message += i["message"]["content"]
             response_message.write(assistant_message)
         st.session_state.messages.append({"role": "assistant","content": assistant_message})
+        reserve_session_history()
 
         
         
